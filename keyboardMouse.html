@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html>
+
+<script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Canvas</title>
+
+    <style type="text/css">
+        canvas {
+            border: 1px solid grey;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div id="label"></div>
+
+    <canvas id="canvas-for-ball"></canvas>
+
+    <script type="text/javascript">
+        // Gets a handle to the element with id canvasOne.
+        var canvas = document.getElementById("canvas-for-ball");
+        // Get a 2D context for the canvas.
+        var ctx = canvas.getContext("2d");
+
+        // Ball class
+        class Ball {
+            constructor(x, y, r, xv, yv) {
+                this.x = x;
+                this.y = y;
+                this.r = r;
+                this.xv = xv;
+                this.yv = yv;
+                this.theta = 0;
+                this.thetaInc = 0.005;
+                this.bounce = 0.75;
+                this.gravity = 0.25;
+                this.friction = 0.98;
+            }
+
+            rotateBall() {
+                //incrementing degrees slightly every loop so ball has appearance of rotating
+                this.theta += this.thetaInc;
+            }
+
+            draw() {
+                // Draw the ball
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
+                for (var i = 1; i < 8; i++) {
+                    ctx.moveTo(this.x, this.y);
+                    let x1 = 15 * Math.cos((i / 7 + this.theta) * (Math.PI * 2)) + this.x;
+                    let y1 = 15 * Math.sin((i / 7 + this.theta) * (Math.PI * 2)) + this.y;
+                    ctx.lineTo(x1, y1);
+                }
+                ctx.fillStyle = "yellow";
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            move() {
+                // update ball position
+                this.x += this.xv
+                this.y += this.yv
+
+                if (this.y + this.r >= canvas.height) {
+                    //reverse direction and lose energy from bouncing
+                    this.yv *= -this.bounce;
+                    //reset position
+                    this.y = canvas.height - this.r;
+                    //slow down balls x Vel with friction 
+                    this.xv *= this.friction;
+                }
+                // top bound / ceiling
+                if (this.y - this.r <= 0) {
+                    this.yv = -this.yv;
+                    this.y = this.r;
+                    this.xv *= this.friction;
+                }
+
+                // left bound
+                if (this.x - this.r <= 0) {
+                    this.xv = -this.xv;
+                    this.x = this.r;
+                }
+
+                // right bound
+                if (this.x + this.r >= canvas.width) {
+                    this.xv = -this.xv;
+                    this.x = canvas.width - this.r;
+                }
+
+                // add gravity
+                this.yv += this.gravity;
+            }
+        }
+
+        //keypresses with jQuery
+        b1 = new Ball(80, 60, 15, 2, 2);
+        b2 = new Ball(199, 100, 15, 2, 2);
+
+        function repeatme() {
+            ctx.clearRect(0, 0, 500, 400);
+            var ballArr = [];//creating array to hold all the balls
+            ballArr.push(b1);//pushing obj1 into array
+            ballArr.push(b2);//pushing obj2 into array
+
+            for (var i = 0; i < ballArr.length; i++) {
+                ballArr[i].draw();
+                ballArr[i].move();
+                ballArr[i].rotateBall();
+            }
+
+            collisionDetection(this.b1, this.b2);//function using the 2 objecs as parameters
+            window.requestAnimationFrame(repeatme);//repeates animation
+        }
+
+        //keypresses with jQuery
+        $(document.body).on('keydown', function (e) {
+            console.log(e.which);
+            switch (e.which) {
+                case 87:
+                    console.log('W has been pressed!');
+                    b1.yv += 10;
+                    break;
+                // key code for A key
+                case 65:
+                    console.log('A key pressed!');
+                    b1.xv -= 10;
+                    break;
+                //key code for S key
+                case 83:
+                    console.log("S key pressed!");
+                    b1.yv -= 10;
+                    break;
+                //key code for D key
+                case 68:
+                    console.log("D key pressed!");
+                    b1.xv += 10;
+                    break;
+                //key code for R key
+                case 82:
+                    console.log("R key pressed");
+                    b1.thetaInc *= -0.001;
+                    break;
+                //key code for T key
+                case 84:
+                    console.log("T key pressed");
+                    b1.thetaInc *= -0.001;
+                    break;
+            }
+        });
+
+        canvas.addEventListener("dblclick", function (e) {
+            var canvasPosition = {
+                x: canvas.offsetLeft,
+                y: canvas.offsetTop
+            }
+
+            //locates position of mouse click by subtracting local coordinates away from global coordinates
+            var mouse = {
+                x: e.clientX - canvasPosition.x,
+                y: e.clientY - canvasPosition.y
+            }
+
+            b1.x = mouse.x;//setting ball x coordinate to mouse x corordinate
+            b1.y = mouse.y;//setting ball y coordinate to mouse y corordinate
+        });
+
+        //function to test if circles are colliding 
+        function collisionDetection(ball1, ball2) {
+            var dx = Math.pow((ball1.x - ball2.x), 2);//math.pow squares variable to a power
+            var dy = Math.pow((ball1.y - ball2.y), 2);
+            var distance = Math.sqrt(dx + dy);
+
+            if (distance <= (ball1.r + ball2.r)) {
+                document.getElementById("label").innerText = "Collissions at: "//label above canvas displaying coordinates anytime ball touch
+                    + Math.round(ball1.x + ball2.x / 2) + ", "
+                    + Math.round(ball1.y + ball2.y / 2);
+                console.log("Collission at: "
+                    + Math.round(ball1.x + ball2.x / 2) + ", "
+                    + Math.round(ball1.y + ball2.y / 2));
+            }
+
+            //test for 'hits' with eachother
+            if ((Math.abs(ball1.x - ball2.x) < (ball1.r + ball2.r))
+                && (Math.abs(ball1.y - ball2.y) < (ball1.r + ball2.r))) {
+                //reverse ball one
+                ball1.dx = -ball1.dx;
+                ball1.dy = -ball1.dy;
+
+                //reverse ball two
+                ball2.dx = -ball2.dx;
+                ball2.dy = -ball2.dy;
+            }
+        }
+
+        repeatme();
+
+    </script>
+
+</body>
+
+</html>
